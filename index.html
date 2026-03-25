@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fourth Move Forgets</title>
+  <meta
+    name="description"
+    content="FIFO tic-tac-toe for GitHub Pages: every fourth move erases your oldest piece."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  >
+  <style>
+    :root {
+      --bg-1: hsl(26 88% 95%);
+      --bg-2: hsl(192 70% 88%);
+      --bg-3: hsl(342 92% 82%);
+      --surface: hsla(0 0% 100% / 0.8);
+      --surface-strong: hsla(0 0% 100% / 0.92);
+      --cell: hsla(0 0% 100% / 0.74);
+      --line: hsla(0 0% 0% / 0.08);
+      --text: hsl(220 28% 16%);
+      --muted: hsl(220 14% 38%);
+      --x-color: hsl(18 78% 44%);
+      --o-color: hsl(202 74% 42%);
+      --accent: hsl(344 84% 54%);
+      --accent-strong: hsl(38 84% 48%);
+      --shadow: 0 22px 50px hsla(228 32% 22% / 0.14);
+      --focus: hsla(344 92% 52% / 0.28);
+      --tilt: 135deg;
+      color-scheme: light dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, hsla(0 0% 100% / 0.5) 0, transparent 28%),
+        radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--bg-3) 78%, transparent) 0, transparent 30%),
+        radial-gradient(circle at 70% 78%, color-mix(in srgb, var(--bg-2) 86%, transparent) 0, transparent 32%),
+        linear-gradient(var(--tilt), var(--bg-1), var(--bg-2));
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      width: 18rem;
+      height: 18rem;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(12px);
+      opacity: 0.42;
+    }
+
+    body::before {
+      top: -4rem;
+      right: -4rem;
+      background: color-mix(in srgb, var(--bg-3) 72%, transparent);
+    }
+
+    body::after {
+      bottom: -6rem;
+      left: -3rem;
+      background: color-mix(in srgb, var(--bg-2) 82%, transparent);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app-shell {
+      width: min(1120px, calc(100% - 1.5rem));
+      margin: 0 auto;
+      padding: 1rem 0 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 1.5rem;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .hero {
+      display: grid;
+      gap: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      max-width: 11ch;
+    }
+
+    .hero-copy p {
+      margin: 0;
+      max-width: 44rem;
+      font-size: clamp(1rem, 2vw, 1.12rem);
+      color: var(--muted);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .theme-chip,
+    .starter-chip,
+    .status-text {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-height: 2.6rem;
+      padding: 0.72rem 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+      color: var(--muted);
+    }
+
+    .theme-chip strong,
+    .starter-chip strong {
+      color: var(--text);
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pill-button,
+    .mode-button {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.78rem 1.05rem;
+      background: color-mix(in srgb, var(--surface-strong) 72%, transparent);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .pill-button:hover,
+    .mode-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px hsla(228 28% 18% / 0.12);
+    }
+
+    .pill-button:focus-visible,
+    .mode-button:focus-visible,
+    .cell:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 5px var(--focus), var(--shadow);
+    }
+
+    .pill-button {
+      padding-inline: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 26%, var(--surface-strong)), color-mix(in srgb, var(--accent-strong) 20%, var(--surface-strong)));
+    }
+
+    .main-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .board-panel {
+      padding: 1.1rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mode-group {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+
+    .mode-button {
+      min-width: 6.75rem;
+      font-weight: 700;
+    }
+
+    .mode-button.is-active {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, var(--surface-strong)), color-mix(in srgb, var(--accent-strong) 22%, var(--surface-strong)));
+      border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-text {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .shortcut-text {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .board-wrap {
+      padding: clamp(0.35rem, 1vw, 0.75rem);
+      border-radius: 1.45rem;
+      background:
+        linear-gradient(150deg, color-mix(in srgb, var(--surface-strong) 90%, transparent), color-mix(in srgb, var(--cell) 90%, transparent));
+      border: 1px solid var(--line);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.55rem, 1.8vw, 0.95rem);
+    }
+
+    .cell {
+      position: relative;
+      min-width: 0;
+      aspect-ratio: 1;
+      border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
+      border-radius: 1.2rem;
+      background:
+        linear-gradient(160deg, color-mix(in srgb, var(--cell) 92%, transparent), color-mix(in srgb, var(--surface-strong) 86%, transparent));
+      color: var(--text);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, opacity 150ms ease;
+      box-shadow: inset 0 1px 0 hsla(0 0% 100% / 0.4);
+    }
+
+    .cell:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+      box-shadow: inset 0 1px 0 hsla(0 0% 100% / 0.55), 0 10px 22px hsla(228 28% 18% / 0.12);
+    }
+
+    .cell:disabled {
+      cursor: not-allowed;
+      opacity: 0.96;
+    }
+
+    .cell.is-locked {
+      cursor: default;
+    }
+
+    .cell.is-win {
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      box-shadow: inset 0 1px 0 hsla(0 0% 100% / 0.5), 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent), 0 14px 30px hsla(228 28% 18% / 0.14);
+    }
+
+    .piece {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-family: "Fraunces", serif;
+      font-size: clamp(3rem, 12vw, 5rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      text-shadow: 0 10px 16px hsla(228 28% 14% / 0.1);
+      transition: opacity 160ms ease;
+    }
+
+    .piece.x {
+      color: var(--x-color);
+    }
+
+    .piece.o {
+      color: var(--o-color);
+    }
+
+    .piece.is-expiring {
+      opacity: 0.5;
+    }
+
+    .piece.is-incoming {
+      animation: piece-in 210ms ease-out;
+    }
+
+    .piece.is-outgoing {
+      pointer-events: none;
+      animation: piece-out 150ms ease-in forwards;
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .scores,
+    .rules {
+      padding: 1.15rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: end;
+    }
+
+    .section-heading h2,
+    .section-heading h3 {
+      margin: 0;
+      font-family: "Fraunces", serif;
+      font-size: 1.4rem;
+      letter-spacing: -0.03em;
+    }
+
+    .section-heading p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .score-grid {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .score-card {
+      display: grid;
+      gap: 0.8rem;
+      padding: 1rem;
+      border-radius: 1.2rem;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
+    }
+
+    .score-card.is-active {
+      border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+      box-shadow: 0 12px 30px hsla(228 28% 18% / 0.08);
+    }
+
+    .score-card h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .score-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .score-pill {
+      padding: 0.85rem 0.9rem;
+      border-radius: 1rem;
+      background: color-mix(in srgb, var(--cell) 88%, transparent);
+      border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+    }
+
+    .score-label {
+      display: block;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .score-value {
+      font-size: clamp(1.35rem, 3vw, 1.9rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .rule-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.7rem;
+      color: var(--text);
+    }
+
+    .rule-list li {
+      padding: 0.82rem 0.9rem;
+      border-radius: 1rem;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
+    }
+
+    .rule-list strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .keyboard-map {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .keyboard-row {
+      display: flex;
+      gap: 0.45rem;
+    }
+
+    kbd {
+      min-width: 2.05rem;
+      padding: 0.46rem 0.55rem;
+      border-radius: 0.8rem;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--cell) 90%, transparent);
+      box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--line) 55%, transparent);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @keyframes piece-in {
+      from {
+        transform: scale(0.76) rotate(-6deg);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    @keyframes piece-out {
+      from {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: scale(0.78);
+      }
+    }
+
+    @media (min-width: 920px) {
+      .hero {
+        grid-template-columns: minmax(0, 1.2fr) auto;
+        align-items: end;
+      }
+
+      .main-grid {
+        grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
+        align-items: start;
+      }
+
+      .app-shell {
+        padding-top: 1.3rem;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        width: min(100%, calc(100% - 1rem));
+      }
+
+      .hero,
+      .board-panel,
+      .scores,
+      .rules {
+        padding: 1rem;
+      }
+
+      .control-row,
+      .status-row,
+      .hero-meta,
+      .section-heading {
+        align-items: stretch;
+      }
+
+      .theme-chip,
+      .starter-chip,
+      .status-text,
+      .pill-button {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .mode-group {
+        width: 100%;
+      }
+
+      .mode-button {
+        flex: 1 1 30%;
+        min-width: 0;
+      }
+
+      .score-pair {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero card">
+      <div class="hero-copy">
+        <p class="eyebrow">GitHub Pages-ready</p>
+        <h1>Fourth Move Forgets</h1>
+        <p>Three in a row still wins, but every fourth mark erases your oldest one. The board never truly settles.</p>
+      </div>
+      <div class="hero-meta">
+        <span class="theme-chip"><strong>Theme</strong><span id="theme-name">Warm Static</span></span>
+        <button class="pill-button" id="new-game" type="button">New Game</button>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <section class="board-panel card" aria-labelledby="board-heading">
+        <h2 class="sr-only" id="board-heading">Game board</h2>
+        <div class="control-row">
+          <div class="mode-group" role="tablist" aria-label="Game modes">
+            <button class="mode-button" data-mode="duel" type="button" role="tab" aria-selected="true">2 Players</button>
+            <button class="mode-button" data-mode="easy" type="button" role="tab" aria-selected="false">Easy AI</button>
+            <button class="mode-button" data-mode="hard" type="button" role="tab" aria-selected="false">Hard AI</button>
+          </div>
+          <span class="starter-chip"><strong>Opener</strong><span id="starter-text">P1 (X)</span></span>
+        </div>
+
+        <div class="status-row">
+          <div class="status-text" id="status-text" aria-live="polite">P1 (X) to place.</div>
+          <p class="shortcut-text">Keys: A S D / F G H / J K L / Space</p>
+        </div>
+
+        <div class="board-wrap">
+          <div class="board" id="board" role="grid" aria-labelledby="board-heading"></div>
+        </div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="scores card" aria-labelledby="scores-heading">
+          <div class="section-heading">
+            <div>
+              <h2 id="scores-heading">Scoreboard</h2>
+              <p>All six tallies stay saved in your browser.</p>
+            </div>
+          </div>
+
+          <div class="score-grid">
+            <article class="score-card" data-score-card="duel">
+              <h3>2 Players</h3>
+              <div class="score-pair">
+                <div class="score-pill">
+                  <span class="score-label">P1 (X)</span>
+                  <span class="score-value" id="score-duel-x">0</span>
+                </div>
+                <div class="score-pill">
+                  <span class="score-label">P2 (O)</span>
+                  <span class="score-value" id="score-duel-o">0</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="score-card" data-score-card="easy">
+              <h3>Easy AI</h3>
+              <div class="score-pair">
+                <div class="score-pill">
+                  <span class="score-label">You</span>
+                  <span class="score-value" id="score-easy-user">0</span>
+                </div>
+                <div class="score-pill">
+                  <span class="score-label">AI</span>
+                  <span class="score-value" id="score-easy-ai">0</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="score-card" data-score-card="hard">
+              <h3>Hard AI</h3>
+              <div class="score-pair">
+                <div class="score-pill">
+                  <span class="score-label">You</span>
+                  <span class="score-value" id="score-hard-user">0</span>
+                </div>
+                <div class="score-pill">
+                  <span class="score-label">AI</span>
+                  <span class="score-value" id="score-hard-ai">0</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="rules card" aria-labelledby="rules-heading">
+          <div class="section-heading">
+            <div>
+              <h3 id="rules-heading">House Rules</h3>
+              <p>The oldest mark goes dim when it is next in line to vanish.</p>
+            </div>
+          </div>
+
+          <ul class="rule-list">
+            <li>
+              <strong>FIFO</strong>
+              Each player keeps only three live marks. On the fourth placement, their oldest mark disappears at the same moment.
+            </li>
+            <li>
+              <strong>Random opener</strong>
+              Every new round starts with a coin flip. In AI modes, you are always X and the AI is always O.
+            </li>
+            <li>
+              <strong>Keyboard grid</strong>
+              <div class="keyboard-map" aria-label="Keyboard board map">
+                <div class="keyboard-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+                <div class="keyboard-row"><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd></div>
+                <div class="keyboard-row"><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></div>
+                <div class="keyboard-row"><kbd>Space</kbd></div>
+              </div>
+            </li>
+          </ul>
+
+          <p class="footer-note">Switching modes or pressing Space starts a fresh round with a new palette.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "fourth-move-forgets-scores-v1";
+    const X_MARK = "X";
+    const O_MARK = "O";
+    const MODES = {
+      duel: { label: "2 Players", ai: false, showFadeHint: true },
+      easy: { label: "Easy AI", ai: true, showFadeHint: true },
+      hard: { label: "Hard AI", ai: true, showFadeHint: false }
+    };
+    const CELL_NAMES = [
+      "top left",
+      "top center",
+      "top right",
+      "middle left",
+      "center",
+      "middle right",
+      "bottom left",
+      "bottom center",
+      "bottom right"
+    ];
+    const KEY_TO_CELL = {
+      a: 0,
+      s: 1,
+      d: 2,
+      f: 3,
+      g: 4,
+      h: 5,
+      j: 6,
+      k: 7,
+      l: 8
+    };
+    const WIN_LINES = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+    const THEME_STARTERS = [
+      "Solar",
+      "Harbor",
+      "Cedar",
+      "Mistral",
+      "Copper",
+      "Quartz",
+      "Lagoon",
+      "Signal",
+      "Canvas",
+      "Meadow",
+      "Metro",
+      "Mango"
+    ];
+    const THEME_ENDERS = [
+      "Drift",
+      "Parade",
+      "Bloom",
+      "Current",
+      "Static",
+      "Relay",
+      "Echo",
+      "Orbit",
+      "Spark",
+      "Tide",
+      "Archive",
+      "Glint"
+    ];
+    const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
+    const boardEl = document.getElementById("board");
+    const themeNameEl = document.getElementById("theme-name");
+    const statusTextEl = document.getElementById("status-text");
+    const starterTextEl = document.getElementById("starter-text");
+    const newGameButton = document.getElementById("new-game");
+    const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
+    const scoreEls = {
+      duelX: document.getElementById("score-duel-x"),
+      duelO: document.getElementById("score-duel-o"),
+      easyUser: document.getElementById("score-easy-user"),
+      easyAi: document.getElementById("score-easy-ai"),
+      hardUser: document.getElementById("score-hard-user"),
+      hardAi: document.getElementById("score-hard-ai")
+    };
+    const scoreCards = Array.from(document.querySelectorAll("[data-score-card]"));
+    const cellButtons = [];
+    const state = {
+      mode: "duel",
+      board: Array(9).fill(null),
+      queues: { X: [], O: [] },
+      currentPlayer: X_MARK,
+      starter: X_MARK,
+      winner: null,
+      winningLine: [],
+      scores: loadScores(),
+      themeSeed: createThemeSeed(),
+      outgoingPiece: null,
+      incomingPiece: null,
+      thinking: false,
+      aiToken: 0,
+      hardWorker: null,
+      hardTimeoutId: 0,
+      thinkingTimeoutId: 0,
+      animationTimeouts: []
+    };
+
+    buildBoard();
+    bindEvents();
+    applyTheme(state.themeSeed);
+    startRound({ freshTheme: false });
+
+    function buildBoard() {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < 9; index += 1) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cell";
+        button.dataset.cell = String(index);
+        button.setAttribute("role", "gridcell");
+        button.addEventListener("click", () => handleHumanMove(index));
+        fragment.appendChild(button);
+        cellButtons.push(button);
+      }
+
+      boardEl.appendChild(fragment);
+    }
+
+    function bindEvents() {
+      newGameButton.addEventListener("click", () => startRound({ freshTheme: true }));
+
+      modeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const nextMode = button.dataset.mode;
+          state.mode = nextMode;
+          startRound({ freshTheme: true });
+        });
+      });
+
+      window.addEventListener("keydown", handleKeydown);
+
+      if (typeof themeMedia.addEventListener === "function") {
+        themeMedia.addEventListener("change", () => applyTheme(state.themeSeed));
+      } else if (typeof themeMedia.addListener === "function") {
+        themeMedia.addListener(() => applyTheme(state.themeSeed));
+      }
+    }
+
+    function handleKeydown(event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      if (event.code === "Space") {
+        event.preventDefault();
+        startRound({ freshTheme: true });
+        return;
+      }
+
+      const index = KEY_TO_CELL[event.key.toLowerCase()];
+
+      if (typeof index === "number") {
+        event.preventDefault();
+        handleHumanMove(index);
+      }
+    }
+
+    function startRound(options = {}) {
+      const { freshTheme = true } = options;
+      stopAiWork();
+      clearAnimations();
+
+      if (freshTheme) {
+        state.themeSeed = createThemeSeed();
+      }
+
+      state.board = Array(9).fill(null);
+      state.queues = { X: [], O: [] };
+      state.currentPlayer = Math.random() < 0.5 ? X_MARK : O_MARK;
+      state.starter = state.currentPlayer;
+      state.winner = null;
+      state.winningLine = [];
+      state.outgoingPiece = null;
+      state.incomingPiece = null;
+      state.thinking = false;
+      applyTheme(state.themeSeed);
+      render();
+
+      if (isAiMode() && state.currentPlayer === O_MARK) {
+        queueAiMove();
+      }
+    }
+
+    function handleHumanMove(index) {
+      if (!canHumansAct()) {
+        return;
+      }
+
+      if (!isMoveValid(state, state.currentPlayer, index)) {
+        return;
+      }
+
+      commitMove(index, state.currentPlayer);
+    }
+
+    function commitMove(index, player) {
+      stopAiWork({ keepToken: true });
+      const result = applyMove(state, player, index);
+      state.board = result.board;
+      state.queues = result.queues;
+      state.currentPlayer = result.currentPlayer;
+      state.winner = result.winner;
+      state.winningLine = result.winningLine;
+      state.incomingPiece = { cell: result.placed, player };
+
+      if (result.removed !== null && result.removed !== result.placed) {
+        state.outgoingPiece = { cell: result.removed, player };
+        const timeoutId = window.setTimeout(() => {
+          state.outgoingPiece = null;
+          state.animationTimeouts = state.animationTimeouts.filter((entry) => entry !== timeoutId);
+          render();
+        }, 160);
+        state.animationTimeouts.push(timeoutId);
+      } else {
+        state.outgoingPiece = null;
+      }
+
+      const incomingTimeoutId = window.setTimeout(() => {
+        state.incomingPiece = null;
+        state.animationTimeouts = state.animationTimeouts.filter((entry) => entry !== incomingTimeoutId);
+        render();
+      }, 220);
+      state.animationTimeouts.push(incomingTimeoutId);
+
+      if (state.winner) {
+        recordWin(state.winner);
+      }
+
+      render();
+
+      if (!state.winner && isAiMode() && state.currentPlayer === O_MARK) {
+        queueAiMove();
+      }
+    }
+
+    function queueAiMove() {
+      const token = ++state.aiToken;
+
+      if (state.mode === "easy") {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (!isAiTurnActive(token)) {
+              return;
+            }
+
+            const move = chooseEasyMove(snapshotState(state));
+            commitMove(move, O_MARK);
+          });
+        });
+        return;
+      }
+
+      const snapshot = snapshotState(state);
+      const fallbackMove = chooseFallbackMove(snapshot);
+      const worker = new Worker(getHardWorkerUrl());
+      state.hardWorker = worker;
+      state.thinkingTimeoutId = window.setTimeout(() => {
+        if (isAiTurnActive(token)) {
+          state.thinking = true;
+          render();
+        }
+      }, 180);
+      state.hardTimeoutId = window.setTimeout(() => {
+        if (!isAiTurnActive(token)) {
+          return;
+        }
+
+        if (state.hardWorker === worker) {
+          worker.terminate();
+          state.hardWorker = null;
+        }
+
+        state.thinking = false;
+        commitMove(fallbackMove, O_MARK);
+      }, 5000);
+
+      worker.onmessage = (event) => {
+        if (!isAiTurnActive(token)) {
+          worker.terminate();
+          return;
+        }
+
+        cleanupWorker(worker);
+        state.thinking = false;
+        const candidate = event.data && Number.isInteger(event.data.move) ? event.data.move : fallbackMove;
+        const safeMove = isMoveValid(snapshot, O_MARK, candidate) ? candidate : fallbackMove;
+        commitMove(safeMove, O_MARK);
+      };
+
+      worker.onerror = () => {
+        if (!isAiTurnActive(token)) {
+          worker.terminate();
+          return;
+        }
+
+        cleanupWorker(worker);
+        state.thinking = false;
+        commitMove(fallbackMove, O_MARK);
+      };
+
+      worker.postMessage(snapshot);
+    }
+
+    function cleanupWorker(worker) {
+      if (state.hardWorker === worker) {
+        state.hardWorker = null;
+      }
+
+      window.clearTimeout(state.hardTimeoutId);
+      window.clearTimeout(state.thinkingTimeoutId);
+      state.hardTimeoutId = 0;
+      state.thinkingTimeoutId = 0;
+      worker.terminate();
+    }
+
+    function stopAiWork(options = {}) {
+      const { keepToken = false } = options;
+
+      if (!keepToken) {
+        state.aiToken += 1;
+      }
+
+      if (state.hardWorker) {
+        state.hardWorker.terminate();
+        state.hardWorker = null;
+      }
+
+      window.clearTimeout(state.hardTimeoutId);
+      window.clearTimeout(state.thinkingTimeoutId);
+      state.hardTimeoutId = 0;
+      state.thinkingTimeoutId = 0;
+      state.thinking = false;
+    }
+
+    function clearAnimations() {
+      state.animationTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      state.animationTimeouts = [];
+      state.outgoingPiece = null;
+      state.incomingPiece = null;
+    }
+
+    function render() {
+      themeNameEl.textContent = state.themeSeed.name;
+      starterTextEl.textContent = labelForPlayer(state.starter);
+      statusTextEl.textContent = buildStatusText();
+
+      modeButtons.forEach((button) => {
+        const active = button.dataset.mode === state.mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+
+      scoreCards.forEach((card) => {
+        card.classList.toggle("is-active", card.dataset.scoreCard === state.mode);
+      });
+
+      scoreEls.duelX.textContent = String(state.scores.duel.x);
+      scoreEls.duelO.textContent = String(state.scores.duel.o);
+      scoreEls.easyUser.textContent = String(state.scores.easy.user);
+      scoreEls.easyAi.textContent = String(state.scores.easy.ai);
+      scoreEls.hardUser.textContent = String(state.scores.hard.user);
+      scoreEls.hardAi.textContent = String(state.scores.hard.ai);
+
+      const locked = isBoardLocked();
+
+      cellButtons.forEach((button, index) => {
+        const occupant = state.board[index];
+        const validMove = !locked && isMoveValid(state, state.currentPlayer, index);
+        button.disabled = !validMove;
+        button.classList.toggle("is-locked", locked || !validMove);
+        button.classList.toggle("is-win", state.winningLine.includes(index));
+        button.setAttribute("aria-label", buildCellAriaLabel(index));
+        button.textContent = "";
+
+        if (occupant) {
+          button.appendChild(makePieceEl(occupant, {
+            expiring: shouldShowFadeHint() && isExpiringCell(state, occupant, index),
+            incoming: Boolean(state.incomingPiece && state.incomingPiece.cell === index)
+          }));
+        }
+
+        if (state.outgoingPiece && state.outgoingPiece.cell === index) {
+          button.appendChild(makePieceEl(state.outgoingPiece.player, { outgoing: true }));
+        }
+      });
+    }
+
+    function makePieceEl(player, options = {}) {
+      const piece = document.createElement("span");
+      piece.className = "piece";
+      piece.classList.add(player === X_MARK ? "x" : "o");
+
+      if (options.expiring) {
+        piece.classList.add("is-expiring");
+      }
+
+      if (options.incoming) {
+        piece.classList.add("is-incoming");
+      }
+
+      if (options.outgoing) {
+        piece.classList.add("is-outgoing");
+      }
+
+      piece.textContent = player;
+      return piece;
+    }
+
+    function buildStatusText() {
+      if (state.winner) {
+        return `${labelForPlayer(state.winner)} wins the round. Press Space or New Game.`;
+      }
+
+      if (state.thinking) {
+        return "Hard AI is thinking...";
+      }
+
+      if (isAiMode() && state.currentPlayer === O_MARK) {
+        return `${labelForPlayer(O_MARK)} to place.`;
+      }
+
+      return `${labelForPlayer(state.currentPlayer)} to place.`;
+    }
+
+    function buildCellAriaLabel(index) {
+      const occupant = state.board[index];
+      const parts = [CELL_NAMES[index]];
+
+      if (!occupant) {
+        parts.push("empty");
+      } else {
+        parts.push(`occupied by ${labelForPlayer(occupant)}`);
+
+        if (isExpiringCell(state, occupant, index)) {
+          parts.push("this is the oldest live mark");
+        }
+      }
+
+      if (!isBoardLocked() && isMoveValid(state, state.currentPlayer, index)) {
+        if (occupant === state.currentPlayer && index === getOldestCell(state, occupant)) {
+          parts.push("replaceable now");
+        } else {
+          parts.push(`press to place ${labelForPlayer(state.currentPlayer)}`);
+        }
+      }
+
+      return parts.join(", ");
+    }
+
+    function isBoardLocked() {
+      if (state.winner) {
+        return true;
+      }
+
+      return isAiMode() && state.currentPlayer === O_MARK;
+    }
+
+    function canHumansAct() {
+      if (state.winner) {
+        return false;
+      }
+
+      if (isAiMode() && state.currentPlayer === O_MARK) {
+        return false;
+      }
+
+      return true;
+    }
+
+    function isAiMode() {
+      return MODES[state.mode].ai;
+    }
+
+    function isAiTurnActive(token) {
+      return state.aiToken === token && !state.winner && isAiMode() && state.currentPlayer === O_MARK;
+    }
+
+    function labelForPlayer(player) {
+      if (state.mode === "duel") {
+        return player === X_MARK ? "P1 (X)" : "P2 (O)";
+      }
+
+      return player === X_MARK ? "You (X)" : `${MODES[state.mode].label} (O)`;
+    }
+
+    function recordWin(winner) {
+      if (state.mode === "duel") {
+        state.scores.duel[winner === X_MARK ? "x" : "o"] += 1;
+      } else {
+        state.scores[state.mode][winner === X_MARK ? "user" : "ai"] += 1;
+      }
+
+      saveScores(state.scores);
+    }
+
+    function snapshotState(source) {
+      return {
+        board: source.board.slice(),
+        queues: {
+          X: source.queues.X.slice(),
+          O: source.queues.O.slice()
+        },
+        currentPlayer: source.currentPlayer
+      };
+    }
+
+    function getValidMoves(snapshot, player) {
+      const moves = [];
+      const oldest = getOldestCell(snapshot, player);
+
+      for (let index = 0; index < snapshot.board.length; index += 1) {
+        const occupant = snapshot.board[index];
+
+        if (occupant === null) {
+          moves.push(index);
+          continue;
+        }
+
+        if (occupant === player && oldest === index) {
+          moves.push(index);
+        }
+      }
+
+      return moves;
+    }
+
+    function isMoveValid(snapshot, player, index) {
+      return getValidMoves(snapshot, player).includes(index);
+    }
+
+    function applyMove(snapshot, player, index) {
+      const board = snapshot.board.slice();
+      const queues = {
+        X: snapshot.queues.X.slice(),
+        O: snapshot.queues.O.slice()
+      };
+      let removed = null;
+
+      if (queues[player].length === 3) {
+        removed = queues[player].shift();
+        board[removed] = null;
+      }
+
+      board[index] = player;
+      queues[player].push(index);
+      const winnerInfo = findWinner(board);
+
+      return {
+        board,
+        queues,
+        removed,
+        placed: index,
+        currentPlayer: player === X_MARK ? O_MARK : X_MARK,
+        winner: winnerInfo ? winnerInfo.player : null,
+        winningLine: winnerInfo ? winnerInfo.line : []
+      };
+    }
+
+    function findWinner(board) {
+      for (const line of WIN_LINES) {
+        const [a, b, c] = line;
+
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+          return { player: board[a], line };
+        }
+      }
+
+      return null;
+    }
+
+    function getOldestCell(snapshot, player) {
+      return snapshot.queues[player].length === 3 ? snapshot.queues[player][0] : null;
+    }
+
+    function isExpiringCell(snapshot, player, index) {
+      return getOldestCell(snapshot, player) === index;
+    }
+
+    function shouldShowFadeHint() {
+      return MODES[state.mode].showFadeHint;
+    }
+
+    function chooseEasyMove(snapshot) {
+      const moves = getValidMoves(snapshot, O_MARK);
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    function chooseFallbackMove(snapshot) {
+      const moves = orderMoves(snapshot, getValidMoves(snapshot, O_MARK));
+      let bestMove = moves[0];
+      let bestScore = -Infinity;
+
+      for (const move of moves) {
+        const score = scoreMove(snapshot, O_MARK, move);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+      }
+
+      return bestMove;
+    }
+
+    function scoreMove(snapshot, player, move) {
+      const result = applyMove(snapshot, player, move);
+
+      if (result.winner === O_MARK) {
+        return 1_000_000;
+      }
+
+      if (result.winner === X_MARK) {
+        return -1_000_000;
+      }
+
+      const opponent = player === X_MARK ? O_MARK : X_MARK;
+      let score = heuristicValue(result.board, result.queues);
+
+      const opponentMoves = getValidMoves(result, opponent);
+
+      for (const reply of opponentMoves) {
+        const replyResult = applyMove(result, opponent, reply);
+
+        if (replyResult.winner === opponent) {
+          score -= 50_000;
+        }
+      }
+
+      return score;
+    }
+
+    function heuristicValue(board, queues) {
+      let score = 0;
+      const oldestX = queues.X.length === 3 ? queues.X[0] : null;
+      const oldestO = queues.O.length === 3 ? queues.O[0] : null;
+
+      for (const line of WIN_LINES) {
+        let xCount = 0;
+        let oCount = 0;
+        let emptyCount = 0;
+
+        for (const cell of line) {
+          if (board[cell] === X_MARK) {
+            xCount += 1;
+          } else if (board[cell] === O_MARK) {
+            oCount += 1;
+          } else {
+            emptyCount += 1;
+          }
+        }
+
+        if (xCount > 0 && oCount > 0) {
+          continue;
+        }
+
+        if (oCount === 2 && emptyCount === 1) {
+          score += 30;
+        } else if (oCount === 1 && emptyCount === 2) {
+          score += 8;
+        }
+
+        if (xCount === 2 && emptyCount === 1) {
+          score -= 34;
+        } else if (xCount === 1 && emptyCount === 2) {
+          score -= 9;
+        }
+
+        if (oldestO !== null && line.includes(oldestO) && oCount > 0 && xCount === 0) {
+          score -= 4;
+        }
+
+        if (oldestX !== null && line.includes(oldestX) && xCount > 0 && oCount === 0) {
+          score += 4;
+        }
+      }
+
+      const mobility = getValidMoves({ board, queues, currentPlayer: O_MARK }, O_MARK).length - getValidMoves({ board, queues, currentPlayer: X_MARK }, X_MARK).length;
+      score += mobility * 1.5;
+
+      if (board[4] === O_MARK) {
+        score += 5;
+      } else if (board[4] === X_MARK) {
+        score -= 5;
+      }
+
+      for (const corner of [0, 2, 6, 8]) {
+        if (board[corner] === O_MARK) {
+          score += 2;
+        } else if (board[corner] === X_MARK) {
+          score -= 2;
+        }
+      }
+
+      return score;
+    }
+
+    function orderMoves(snapshot, moves) {
+      const priority = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+      const player = snapshot.currentPlayer;
+
+      return moves.slice().sort((left, right) => {
+        const leftScore = scoreMove(snapshot, player, left);
+        const rightScore = scoreMove(snapshot, player, right);
+
+        if (rightScore !== leftScore) {
+          return player === O_MARK ? rightScore - leftScore : leftScore - rightScore;
+        }
+
+        return priority.indexOf(left) - priority.indexOf(right);
+      });
+    }
+
+    function createThemeSeed() {
+      const baseHue = Math.floor(Math.random() * 360);
+      const accentHue = (baseHue + 70 + Math.floor(Math.random() * 140)) % 360;
+      const glowHue = (baseHue + 190 + Math.floor(Math.random() * 60)) % 360;
+      const tilt = `${110 + Math.floor(Math.random() * 80)}deg`;
+
+      return {
+        baseHue,
+        accentHue,
+        glowHue,
+        tilt,
+        name: `${pick(THEME_STARTERS)} ${pick(THEME_ENDERS)}`
+      };
+    }
+
+    function applyTheme(seed) {
+      const dark = themeMedia.matches;
+      const root = document.documentElement;
+      root.style.colorScheme = dark ? "dark" : "light";
+
+      const vars = dark
+        ? {
+            "--bg-1": `hsl(${seed.baseHue} 38% 10%)`,
+            "--bg-2": `hsl(${seed.accentHue} 62% 16%)`,
+            "--bg-3": `hsl(${seed.glowHue} 70% 28%)`,
+            "--surface": `hsla(${seed.baseHue} 22% 15% / 0.84)`,
+            "--surface-strong": `hsla(${seed.baseHue} 26% 19% / 0.94)`,
+            "--cell": `hsla(${seed.baseHue} 24% 13% / 0.92)`,
+            "--line": `hsla(${seed.accentHue} 74% 80% / 0.12)`,
+            "--text": `hsl(${seed.accentHue} 38% 94%)`,
+            "--muted": `hsl(${seed.baseHue} 18% 72%)`,
+            "--x-color": `hsl(${seed.accentHue} 92% 74%)`,
+            "--o-color": `hsl(${seed.glowHue} 88% 70%)`,
+            "--accent": `hsl(${seed.accentHue} 88% 68%)`,
+            "--accent-strong": `hsl(${seed.glowHue} 92% 66%)`,
+            "--shadow": `0 24px 56px hsla(${seed.baseHue} 48% 4% / 0.34)`,
+            "--focus": `hsla(${seed.accentHue} 96% 72% / 0.28)`,
+            "--tilt": seed.tilt
+          }
+        : {
+            "--bg-1": `hsl(${seed.baseHue} 84% 96%)`,
+            "--bg-2": `hsl(${seed.accentHue} 78% 88%)`,
+            "--bg-3": `hsl(${seed.glowHue} 90% 81%)`,
+            "--surface": `hsla(${seed.baseHue} 56% 99% / 0.78)`,
+            "--surface-strong": `hsla(${seed.baseHue} 72% 99% / 0.94)`,
+            "--cell": `hsla(${seed.baseHue} 58% 99% / 0.76)`,
+            "--line": `hsla(${seed.baseHue} 22% 20% / 0.08)`,
+            "--text": `hsl(${seed.baseHue} 26% 16%)`,
+            "--muted": `hsl(${seed.baseHue} 16% 38%)`,
+            "--x-color": `hsl(${seed.accentHue} 72% 42%)`,
+            "--o-color": `hsl(${seed.glowHue} 74% 42%)`,
+            "--accent": `hsl(${seed.accentHue} 84% 48%)`,
+            "--accent-strong": `hsl(${seed.glowHue} 82% 46%)`,
+            "--shadow": `0 22px 52px hsla(${seed.baseHue} 34% 18% / 0.14)`,
+            "--focus": `hsla(${seed.accentHue} 88% 52% / 0.22)`,
+            "--tilt": seed.tilt
+          };
+
+      Object.entries(vars).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+
+    function pick(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function loadScores() {
+      const fallback = {
+        duel: { x: 0, o: 0 },
+        easy: { user: 0, ai: 0 },
+        hard: { user: 0, ai: 0 }
+      };
+
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+
+        if (!raw) {
+          return fallback;
+        }
+
+        const parsed = JSON.parse(raw);
+
+        return {
+          duel: {
+            x: Number(parsed && parsed.duel && parsed.duel.x) || 0,
+            o: Number(parsed && parsed.duel && parsed.duel.o) || 0
+          },
+          easy: {
+            user: Number(parsed && parsed.easy && parsed.easy.user) || 0,
+            ai: Number(parsed && parsed.easy && parsed.easy.ai) || 0
+          },
+          hard: {
+            user: Number(parsed && parsed.hard && parsed.hard.user) || 0,
+            ai: Number(parsed && parsed.hard && parsed.hard.ai) || 0
+          }
+        };
+      } catch (_error) {
+        return fallback;
+      }
+    }
+
+    function saveScores(scores) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+      } catch (_error) {
+        // Ignore storage failures and keep the in-memory scores.
+      }
+    }
+
+    function getHardWorkerUrl() {
+      if (getHardWorkerUrl.cache) {
+        return getHardWorkerUrl.cache;
+      }
+
+      const workerSource = `
+        const X_MARK = "X";
+        const O_MARK = "O";
+        const WIN_LINES = ${JSON.stringify(WIN_LINES)};
+
+        self.onmessage = (event) => {
+          const root = event.data;
+          const deadline = Date.now() + 4900;
+          const moves = orderMoves(root, getValidMoves(root, O_MARK));
+          let bestMove = moves[0];
+          let bestScore = -Infinity;
+          let completedDepth = 0;
+          const memo = new Map();
+
+          try {
+            for (let depth = 1; depth <= 18; depth += 1) {
+              if (Date.now() > deadline) {
+                break;
+              }
+
+              let localBestMove = bestMove;
+              let localBestScore = -Infinity;
+
+              for (const move of orderMoves(root, moves)) {
+                const child = applyMove(root, O_MARK, move);
+                const score = search(child, depth - 1, -Infinity, Infinity, deadline, memo, new Set());
+
+                if (score > localBestScore) {
+                  localBestScore = score;
+                  localBestMove = move;
+                }
+              }
+
+              bestMove = localBestMove;
+              bestScore = localBestScore;
+              completedDepth = depth;
+
+              if (bestScore > 99990) {
+                break;
+              }
+            }
+          } catch (_error) {
+            // fall back to the best completed depth
+          }
+
+          self.postMessage({ move: bestMove, score: bestScore, depth: completedDepth });
+        };
+
+        function search(snapshot, depth, alpha, beta, deadline, memo, path) {
+          if (Date.now() > deadline) {
+            throw new Error("timeout");
+          }
+
+          const winner = findWinner(snapshot.board);
+
+          if (winner) {
+            return winner.player === O_MARK ? 100000 + depth : -100000 - depth;
+          }
+
+          if (depth === 0) {
+            return heuristicValue(snapshot.board, snapshot.queues);
+          }
+
+          const key = serialize(snapshot);
+
+          if (path.has(key)) {
+            return 0;
+          }
+
+          const memoKey = key + "|" + depth;
+
+          if (memo.has(memoKey)) {
+            return memo.get(memoKey);
+          }
+
+          path.add(key);
+          const player = snapshot.currentPlayer;
+          const moves = orderMoves(snapshot, getValidMoves(snapshot, player));
+          let best = player === O_MARK ? -Infinity : Infinity;
+
+          for (const move of moves) {
+            const child = applyMove(snapshot, player, move);
+            const score = search(child, depth - 1, alpha, beta, deadline, memo, path);
+
+            if (player === O_MARK) {
+              best = Math.max(best, score);
+              alpha = Math.max(alpha, best);
+            } else {
+              best = Math.min(best, score);
+              beta = Math.min(beta, best);
+            }
+
+            if (alpha >= beta) {
+              break;
+            }
+          }
+
+          path.delete(key);
+
+          if (!Number.isFinite(best)) {
+            best = heuristicValue(snapshot.board, snapshot.queues);
+          }
+
+          memo.set(memoKey, best);
+          return best;
+        }
+
+        function serialize(snapshot) {
+          return [
+            snapshot.currentPlayer,
+            snapshot.board.map((cell) => cell || ".").join(""),
+            snapshot.queues.X.join("-"),
+            snapshot.queues.O.join("-")
+          ].join("|");
+        }
+
+        function getValidMoves(snapshot, player) {
+          const moves = [];
+          const oldest = snapshot.queues[player].length === 3 ? snapshot.queues[player][0] : null;
+
+          for (let index = 0; index < snapshot.board.length; index += 1) {
+            const occupant = snapshot.board[index];
+
+            if (occupant === null) {
+              moves.push(index);
+              continue;
+            }
+
+            if (occupant === player && oldest === index) {
+              moves.push(index);
+            }
+          }
+
+          return moves;
+        }
+
+        function applyMove(snapshot, player, index) {
+          const board = snapshot.board.slice();
+          const queues = {
+            X: snapshot.queues.X.slice(),
+            O: snapshot.queues.O.slice()
+          };
+
+          if (queues[player].length === 3) {
+            const removed = queues[player].shift();
+            board[removed] = null;
+          }
+
+          board[index] = player;
+          queues[player].push(index);
+
+          return {
+            board,
+            queues,
+            currentPlayer: player === X_MARK ? O_MARK : X_MARK
+          };
+        }
+
+        function findWinner(board) {
+          for (const line of WIN_LINES) {
+            const [a, b, c] = line;
+
+            if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+              return { player: board[a], line };
+            }
+          }
+
+          return null;
+        }
+
+        function heuristicValue(board, queues) {
+          let score = 0;
+          const oldestX = queues.X.length === 3 ? queues.X[0] : null;
+          const oldestO = queues.O.length === 3 ? queues.O[0] : null;
+
+          for (const line of WIN_LINES) {
+            let xCount = 0;
+            let oCount = 0;
+            let emptyCount = 0;
+
+            for (const cell of line) {
+              if (board[cell] === X_MARK) {
+                xCount += 1;
+              } else if (board[cell] === O_MARK) {
+                oCount += 1;
+              } else {
+                emptyCount += 1;
+              }
+            }
+
+            if (xCount > 0 && oCount > 0) {
+              continue;
+            }
+
+            if (oCount === 2 && emptyCount === 1) {
+              score += 30;
+            } else if (oCount === 1 && emptyCount === 2) {
+              score += 8;
+            }
+
+            if (xCount === 2 && emptyCount === 1) {
+              score -= 34;
+            } else if (xCount === 1 && emptyCount === 2) {
+              score -= 9;
+            }
+
+            if (oldestO !== null && line.includes(oldestO) && oCount > 0 && xCount === 0) {
+              score -= 4;
+            }
+
+            if (oldestX !== null && line.includes(oldestX) && xCount > 0 && oCount === 0) {
+              score += 4;
+            }
+          }
+
+          score += (getValidMoves({ board, queues, currentPlayer: O_MARK }, O_MARK).length - getValidMoves({ board, queues, currentPlayer: X_MARK }, X_MARK).length) * 1.5;
+
+          if (board[4] === O_MARK) {
+            score += 5;
+          } else if (board[4] === X_MARK) {
+            score -= 5;
+          }
+
+          for (const corner of [0, 2, 6, 8]) {
+            if (board[corner] === O_MARK) {
+              score += 2;
+            } else if (board[corner] === X_MARK) {
+              score -= 2;
+            }
+          }
+
+          return score;
+        }
+
+        function scoreMove(snapshot, player, move) {
+          const result = applyMove(snapshot, player, move);
+          const winner = findWinner(result.board);
+
+          if (winner && winner.player === O_MARK) {
+            return 1000000;
+          }
+
+          if (winner && winner.player === X_MARK) {
+            return -1000000;
+          }
+
+          let score = heuristicValue(result.board, result.queues);
+          const opponent = player === X_MARK ? O_MARK : X_MARK;
+
+          for (const reply of getValidMoves(result, opponent)) {
+            const replyResult = applyMove(result, opponent, reply);
+            const replyWinner = findWinner(replyResult.board);
+
+            if (replyWinner && replyWinner.player === opponent) {
+              score -= 50000;
+            }
+          }
+
+          return score;
+        }
+
+        function orderMoves(snapshot, moves) {
+          const priority = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+          const player = snapshot.currentPlayer;
+
+          return moves.slice().sort((left, right) => {
+            const leftScore = scoreMove(snapshot, player, left);
+            const rightScore = scoreMove(snapshot, player, right);
+
+            if (rightScore !== leftScore) {
+              return player === O_MARK ? rightScore - leftScore : leftScore - rightScore;
+            }
+
+            return priority.indexOf(left) - priority.indexOf(right);
+          });
+        }
+      `;
+
+      const blob = new Blob([workerSource], { type: "text/javascript" });
+      getHardWorkerUrl.cache = URL.createObjectURL(blob);
+      return getHardWorkerUrl.cache;
+    }
+  </script>
+</body>
+</html>
