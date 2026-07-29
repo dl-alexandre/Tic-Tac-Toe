@@ -686,6 +686,10 @@
               Each player keeps only three live marks. On the fourth placement, their oldest mark disappears at the same moment.
             </li>
             <li>
+              <strong>Empty squares only</strong>
+              A new mark must land on an empty square. You cannot replace the oldest mark in place as it disappears.
+            </li>
+            <li>
               <strong>Random opener</strong>
               Every new round starts with a coin flip. In AI modes, you are always X and the AI is always O.
             </li>
@@ -1224,17 +1228,9 @@
 
     function getValidMoves(snapshot, player) {
       const moves = [];
-      const oldest = getOldestCell(snapshot, player);
 
       for (let index = 0; index < snapshot.board.length; index += 1) {
-        const occupant = snapshot.board[index];
-
-        if (occupant === null) {
-          moves.push(index);
-          continue;
-        }
-
-        if (occupant === player && oldest === index) {
+        if (snapshot.board[index] === null) {
           moves.push(index);
         }
       }
@@ -1300,6 +1296,31 @@
 
     function chooseEasyMove(snapshot) {
       const moves = getValidMoves(snapshot, O_MARK);
+      const winningMoves = moves.filter((move) => applyMove(snapshot, O_MARK, move).winner === O_MARK);
+
+      if (winningMoves.length > 0) {
+        return chooseRandomMove(winningMoves);
+      }
+
+      const safeMoves = moves.filter((move) => {
+        const result = applyMove(snapshot, O_MARK, move);
+        return !getValidMoves(result, X_MARK).some((reply) => applyMove(result, X_MARK, reply).winner === X_MARK);
+      });
+      const candidates = safeMoves.length > 0 ? safeMoves : moves;
+
+      if (Math.random() < 0.7) {
+        const scoredMoves = candidates.map((move) => ({
+          move,
+          score: scoreMove(snapshot, O_MARK, move)
+        }));
+        const bestScore = Math.max(...scoredMoves.map(({ score }) => score));
+        return chooseRandomMove(scoredMoves.filter(({ score }) => score === bestScore).map(({ move }) => move));
+      }
+
+      return chooseRandomMove(candidates);
+    }
+
+    function chooseRandomMove(moves) {
       return moves[Math.floor(Math.random() * moves.length)];
     }
 
@@ -1661,17 +1682,9 @@
 
         function getValidMoves(snapshot, player) {
           const moves = [];
-          const oldest = snapshot.queues[player].length === 3 ? snapshot.queues[player][0] : null;
 
           for (let index = 0; index < snapshot.board.length; index += 1) {
-            const occupant = snapshot.board[index];
-
-            if (occupant === null) {
-              moves.push(index);
-              continue;
-            }
-
-            if (occupant === player && oldest === index) {
+            if (snapshot.board[index] === null) {
               moves.push(index);
             }
           }
