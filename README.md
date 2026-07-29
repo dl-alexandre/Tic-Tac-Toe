@@ -15,6 +15,6 @@ Features:
 - Tactical easy AI and search-based hard AI
 - Persistent scoreboard in `localStorage`
 - Mobile-friendly layout
-- Keyboard controls: `A S D`, `F G H`, `J K L`, and `Space`
+- Keyboard controls: `Q W E`, `A S D`, `Z X C`, and `Space`
 
 Pushes to `master` deploy through `.github/workflows/pages.yml` to GitHub Pages.
