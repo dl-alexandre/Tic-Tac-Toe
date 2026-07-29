@@ -601,9 +601,9 @@
         <h2 class="sr-only" id="board-heading">Game board</h2>
         <div class="control-row">
           <div class="mode-group" role="tablist" aria-label="Game modes">
-            <button class="mode-button" data-mode="duel" type="button" role="tab" aria-selected="true">2 Players</button>
-            <button class="mode-button" data-mode="easy" type="button" role="tab" aria-selected="false">Easy AI</button>
+            <button class="mode-button" data-mode="easy" type="button" role="tab" aria-selected="true">Easy AI</button>
             <button class="mode-button" data-mode="hard" type="button" role="tab" aria-selected="false">Hard AI</button>
+            <button class="mode-button" data-mode="duel" type="button" role="tab" aria-selected="false">2 Players</button>
           </div>
           <span class="starter-chip"><strong>Opener</strong><span id="starter-text">P1 (X)</span></span>
         </div>
@@ -797,7 +797,7 @@
     const scoreCards = Array.from(document.querySelectorAll("[data-score-card]"));
     const cellButtons = [];
     const state = {
-      mode: "duel",
+      mode: "easy",
       board: Array(9).fill(null),
       queues: { X: [], O: [] },
       currentPlayer: X_MARK,
